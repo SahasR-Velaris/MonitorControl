@@ -8,6 +8,7 @@ class DisplayManager {
   static let shared = DisplayManager()
 
   var displays: [Display] = []
+  var androidTVDisplays: [AndroidTVDisplay] = []
   var audioControlTargetDisplays: [OtherDisplay] = []
   let globalDDCQueue = DispatchQueue(label: "Global DDC queue")
   let gammaActivityEnforcer = NSWindow(contentRect: .init(origin: NSPoint(x: 0, y: 0), size: .init(width: DEBUG_GAMMA_ENFORCER ? 15 : 1, height: DEBUG_GAMMA_ENFORCER ? 15 : 1)), styleMask: [], backing: .buffered, defer: false)
@@ -313,6 +314,45 @@ class DisplayManager {
 
   func clearDisplays() {
     self.displays = []
+  }
+
+  // MARK: - Android TV
+
+  private static let androidTVPrefsKey = "AndroidTVDevices"
+
+  struct AndroidTVConfig: Codable {
+    var name: String
+    var host: String
+    var port: Int
+  }
+
+  func loadAndroidTVs() {
+    guard let data = UserDefaults.standard.data(forKey: DisplayManager.androidTVPrefsKey),
+          let configs = try? JSONDecoder().decode([AndroidTVConfig].self, from: data) else { return }
+    androidTVDisplays.removeAll()
+    for (index, config) in configs.enumerated() {
+      let tv = AndroidTVDisplay(host: config.host, port: config.port, name: config.name, index: index)
+      androidTVDisplays.append(tv)
+    }
+  }
+
+  func saveAndroidTVs() {
+    let configs = androidTVDisplays.map { AndroidTVConfig(name: $0.tvName, host: $0.adb.host, port: $0.adb.port) }
+    if let data = try? JSONEncoder().encode(configs) {
+      UserDefaults.standard.set(data, forKey: DisplayManager.androidTVPrefsKey)
+    }
+  }
+
+  func addAndroidTV(name: String, host: String, port: Int = 5555) {
+    let tv = AndroidTVDisplay(host: host, port: port, name: name, index: androidTVDisplays.count)
+    androidTVDisplays.append(tv)
+    saveAndroidTVs()
+  }
+
+  func removeAndroidTV(at index: Int) {
+    guard index < androidTVDisplays.count else { return }
+    androidTVDisplays.remove(at: index)
+    saveAndroidTVs()
   }
   
   func addDisplayCounterSuffixes() {

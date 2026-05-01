@@ -71,6 +71,9 @@ class MenuHandler: NSMenu, NSMenuDelegate {
         self.addCombinedDisplayMenuBlock()
       }
     }
+    for tv in DisplayManager.shared.androidTVDisplays {
+      self.updateAndroidTVMenu(tv: tv)
+    }
     self.addDefaultMenuOptions()
   }
 
@@ -200,6 +203,23 @@ class MenuHandler: NSMenu, NSMenuDelegate {
     if addedSliderHandlers.count > 0, prefs.integer(forKey: PrefKey.menuIcon.rawValue) == MenuIcon.sliderOnly.rawValue {
       app.updateStatusItemVisibility(true)
     }
+  }
+
+  func updateAndroidTVMenu(tv: AndroidTVDisplay) {
+    let volumeTitle = NSLocalizedString("Volume", comment: "Shown in menu")
+    let sliderHandler = SliderHandler(display: tv, command: .audioSpeakerVolume, title: volumeTitle)
+    tv.sliderHandler[.audioSpeakerVolume] = sliderHandler
+    DispatchQueue.global(qos: .userInitiated).async {
+      let fraction = tv.getVolumeFraction()
+      DispatchQueue.main.async {
+        sliderHandler.setValue(fraction, displayID: tv.identifier)
+      }
+    }
+    self.addSliderItem(monitorSubMenu: self, sliderHandler: sliderHandler)
+    let tvMenuItem = NSMenuItem()
+    let attrs: [NSAttributedString.Key: Any] = [.foregroundColor: NSColor.systemGray, .font: NSFont.boldSystemFont(ofSize: 12)]
+    tvMenuItem.attributedTitle = NSAttributedString(string: tv.tvName, attributes: attrs)
+    self.insertItem(tvMenuItem, at: 0)
   }
 
   private func appendMenuHeader(friendlyName: String, monitorSubMenu: NSMenu, asSubMenu: Bool, numOfDisplays: Int) {

@@ -73,6 +73,23 @@ class MediaKeyTapManager: MediaKeyTapDelegate {
   }
 
   private func sendDisplayCommandVolumeMute(mediaKey: MediaKey, isRepeat: Bool, isSmallIncrement: Bool, isPressed: Bool) {
+    // Route to Android TV if it matches the current audio output device
+    if isPressed, [.volumeUp, .volumeDown, .mute].contains(mediaKey) {
+      if let deviceName = app.coreAudio.defaultOutputDevice?.name {
+        let normalizedDevice = DisplayManager.shared.normalizedName(deviceName)
+        for tv in DisplayManager.shared.androidTVDisplays {
+          if DisplayManager.shared.normalizedName(tv.tvName) == normalizedDevice {
+            switch mediaKey {
+            case .volumeUp: tv.stepVolume(isUp: true)
+            case .volumeDown: tv.stepVolume(isUp: false)
+            case .mute: tv.adb.mute()
+            default: break
+            }
+            return
+          }
+        }
+      }
+    }
     guard [.volumeUp, .volumeDown, .mute].contains(mediaKey), app.sleepID == 0, app.reconfigureID == 0, let affectedDisplays = DisplayManager.shared.getAffectedDisplays(isBrightness: false, isVolume: true) else {
       return
     }

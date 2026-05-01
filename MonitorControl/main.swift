@@ -26,6 +26,7 @@ let displaysPrefsVc = storyboard.instantiateController(withIdentifier: "Displays
 let menuslidersPrefsVc = storyboard.instantiateController(withIdentifier: "MenuslidersPrefsVC") as? MenuslidersPrefsViewController
 let keyboardPrefsVc = storyboard.instantiateController(withIdentifier: "KeyboardPrefsVC") as? KeyboardPrefsViewController
 let aboutPrefsVc = storyboard.instantiateController(withIdentifier: "AboutPrefsVC") as? AboutPrefsViewController
+let androidTVPrefsVc = AndroidTVPrefsViewController()
 let onboardingVc = storyboard.instantiateController(withIdentifier: "onboardingViewController") as? NSWindowController
 
 autoreleasepool { () in

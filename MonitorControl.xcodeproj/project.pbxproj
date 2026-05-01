@@ -58,6 +58,9 @@
 		F06792F6200A745F0066C438 /* MonitorControlHelper.app in [Login] Copy Helper to start at Login */ = {isa = PBXBuildFile; fileRef = F06792E7200A73460066C438 /* MonitorControlHelper.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		F0A489C4279C71B200BEDFD6 /* OnboardingViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0A489C3279C71B200BEDFD6 /* OnboardingViewController.swift */; };
 		FE4E0896249D584C003A50BB /* OSDUtils.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE4E0895249D584C003A50BB /* OSDUtils.swift */; };
+		CC000003270700000000ADB1 /* AndroidTVDisplay.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC000001270700000000ADB1 /* AndroidTVDisplay.swift */; };
+		CC000004270700000000ADB2 /* AndroidTVADB.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC000002270700000000ADB2 /* AndroidTVADB.swift */; };
+		CC000005270700000000ADB3 /* AndroidTVPrefsViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC000006270700000000ADB3 /* AndroidTVPrefsViewController.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -181,6 +184,9 @@
 		FB5DB28F2AD54C4600306223 /* pt-PT */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "pt-PT"; path = "pt-PT.lproj/InternetAccessPolicy.strings"; sourceTree = "<group>"; };
 		FB5DB2902AD54C4600306223 /* pt-PT */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "pt-PT"; path = "pt-PT.lproj/Localizable.strings"; sourceTree = "<group>"; };
 		FE4E0895249D584C003A50BB /* OSDUtils.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OSDUtils.swift; sourceTree = "<group>"; };
+		CC000001270700000000ADB1 /* AndroidTVDisplay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AndroidTVDisplay.swift; sourceTree = "<group>"; };
+		CC000002270700000000ADB2 /* AndroidTVADB.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AndroidTVADB.swift; sourceTree = "<group>"; };
+		CC000006270700000000ADB3 /* AndroidTVPrefsViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AndroidTVPrefsViewController.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -275,6 +281,7 @@
 				6CBFE27923DB266000D1BC41 /* Display.swift */,
 				6CBFE27B23DB27A200D1BC41 /* AppleDisplay.swift */,
 				F03A8DF11FFBAA6F0034DC27 /* OtherDisplay.swift */,
+				CC000001270700000000ADB1 /* AndroidTVDisplay.swift */,
 			);
 			path = Model;
 			sourceTree = "<group>";
@@ -317,6 +324,7 @@
 				AA16139A26BE772E00DCF027 /* Arm64DDC.swift */,
 				AA4398A826DD55DA00943F16 /* IntelDDC.swift */,
 				FE4E0895249D584C003A50BB /* OSDUtils.swift */,
+				CC000002270700000000ADB2 /* AndroidTVADB.swift */,
 			);
 			path = Support;
 			sourceTree = "<group>";
@@ -359,6 +367,7 @@
 				AA062E8926C9A039007E628C /* DisplaysPrefsViewController.swift */,
 				AA062E8D26CA7BE5007E628C /* DisplaysPrefsCellView.swift */,
 				AA665A5C26C5892800FEF2C1 /* AboutPrefsViewController.swift */,
+				CC000006270700000000ADB3 /* AndroidTVPrefsViewController.swift */,
 			);
 			path = Preferences;
 			sourceTree = "<group>";
@@ -632,6 +641,9 @@
 				6CBFE27A23DB266000D1BC41 /* Display.swift in Sources */,
 				AA44E70727038F7F00E06865 /* KeyboardShortcutsManager.swift in Sources */,
 				F03A8DF21FFBAA6F0034DC27 /* OtherDisplay.swift in Sources */,
+				CC000003270700000000ADB1 /* AndroidTVDisplay.swift in Sources */,
+				CC000004270700000000ADB2 /* AndroidTVADB.swift in Sources */,
+				CC000005270700000000ADB3 /* AndroidTVPrefsViewController.swift in Sources */,
 				AA78BDBD2709FE7B00CA8DF7 /* UpdaterDelegate.swift in Sources */,
 				AA44E7052703790100E06865 /* KeyboardShortcuts+Extension.swift in Sources */,
 				F0A489C4279C71B200BEDFD6 /* OnboardingViewController.swift in Sources */,

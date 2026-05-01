@@ -44,6 +44,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
       menuslidersPrefsVc!,
       keyboardPrefsVc!,
       displaysPrefsVc!,
+      androidTVPrefsVc,
       aboutPrefsVc!,
     ],
     style: self.settingsPaneStyle,
@@ -141,6 +142,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     DisplayManager.shared.configureDisplays()
     DisplayManager.shared.addDisplayCounterSuffixes()
     DisplayManager.shared.updateArm64AVServices()
+    DisplayManager.shared.loadAndroidTVs()
     if firstrun && prefs.integer(forKey: PrefKey.startupAction.rawValue) != StartupAction.write.rawValue {
       DisplayManager.shared.resetSwBrightnessForAllDisplays(prefsOnly: true)
     }

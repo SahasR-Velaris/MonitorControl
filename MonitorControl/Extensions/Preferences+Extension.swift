@@ -10,6 +10,7 @@ extension Settings.PaneIdentifier {
   static let keyboard = Self("Keyboard")
   static let displays = Self("Displays")
   static let about = Self("About")
+  static let androidTV = Self("Android TV")
 }
 
 public extension SettingsWindowController {
