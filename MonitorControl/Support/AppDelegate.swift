@@ -143,6 +143,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     DisplayManager.shared.addDisplayCounterSuffixes()
     DisplayManager.shared.updateArm64AVServices()
     DisplayManager.shared.loadAndroidTVs()
+    _ = AndroidTVVolumeSync.shared
     if firstrun && prefs.integer(forKey: PrefKey.startupAction.rawValue) != StartupAction.write.rawValue {
       DisplayManager.shared.resetSwBrightnessForAllDisplays(prefsOnly: true)
     }

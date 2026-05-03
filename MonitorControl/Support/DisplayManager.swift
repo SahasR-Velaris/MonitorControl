@@ -324,6 +324,8 @@ class DisplayManager {
     var name: String
     var host: String
     var port: Int
+    var audioDeviceName: String
+    var macAddress: String  // WiFi MAC — used to find TV after IP changes
   }
 
   func loadAndroidTVs() {
@@ -332,19 +334,24 @@ class DisplayManager {
     androidTVDisplays.removeAll()
     for (index, config) in configs.enumerated() {
       let tv = AndroidTVDisplay(host: config.host, port: config.port, name: config.name, index: index)
+      tv.audioDeviceName = config.audioDeviceName
+      tv.macAddress = config.macAddress
       androidTVDisplays.append(tv)
     }
   }
 
   func saveAndroidTVs() {
-    let configs = androidTVDisplays.map { AndroidTVConfig(name: $0.tvName, host: $0.adb.host, port: $0.adb.port) }
+    let configs = androidTVDisplays.map {
+      AndroidTVConfig(name: $0.tvName, host: $0.adb.host, port: $0.adb.port, audioDeviceName: $0.audioDeviceName, macAddress: $0.macAddress)
+    }
     if let data = try? JSONEncoder().encode(configs) {
       UserDefaults.standard.set(data, forKey: DisplayManager.androidTVPrefsKey)
     }
   }
 
-  func addAndroidTV(name: String, host: String, port: Int = 5555) {
+  func addAndroidTV(name: String, host: String, port: Int = 5555, audioDeviceName: String = "") {
     let tv = AndroidTVDisplay(host: host, port: port, name: name, index: androidTVDisplays.count)
+    tv.audioDeviceName = audioDeviceName
     androidTVDisplays.append(tv)
     saveAndroidTVs()
   }
@@ -353,6 +360,13 @@ class DisplayManager {
     guard index < androidTVDisplays.count else { return }
     androidTVDisplays.remove(at: index)
     saveAndroidTVs()
+  }
+
+  func updateAndroidTVHost(display: AndroidTVDisplay, newHost: String) {
+    if let idx = androidTVDisplays.firstIndex(where: { $0 === display }) {
+      androidTVDisplays[idx].adb.host = newHost
+      saveAndroidTVs()
+    }
   }
   
   func addDisplayCounterSuffixes() {

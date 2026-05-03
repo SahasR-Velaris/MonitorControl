@@ -7,9 +7,10 @@ import os.log
 class AndroidTVDisplay: Display {
   let adb: AndroidTVADB
   var tvName: String
-  // 0–15 internally, exposed as 0.0–1.0 to the UI
-  static let maxVolume: Int = 15
-  // Synthetic display IDs start here to avoid colliding with real displays
+  var audioDeviceName: String = ""
+  var macAddress: String = ""  // WiFi MAC — stable hardware ID used to find TV after IP changes
+  var maxVolume: Int { AndroidTVADB.maxVolume }
+
   static let syntheticIDBase: CGDirectDisplayID = 0xADB0
 
   init(host: String, port: Int = 5555, name: String, index: Int = 0) {
@@ -17,7 +18,27 @@ class AndroidTVDisplay: Display {
     self.tvName = name
     let syntheticID = AndroidTVDisplay.syntheticIDBase + CGDirectDisplayID(index)
     super.init(syntheticID, name: name, vendorNumber: nil, modelNumber: nil, serialNumber: nil, isVirtual: true, isDummy: true)
-    self.adb.connect()
+    self.connectAndLearnMAC()
+  }
+
+  private func connectAndLearnMAC() {
+    adb.connect(macAddress: macAddress.isEmpty ? nil : macAddress) { [weak self] newIP in
+      guard let self = self else { return }
+      // IP changed — persist it
+      self.adb.host = newIP
+      DisplayManager.shared.updateAndroidTVHost(display: self, newHost: newIP)
+    }
+    // After connecting, read and store MAC if we don't have it yet
+    if macAddress.isEmpty {
+      DispatchQueue.global(qos: .background).asyncAfter(deadline: .now() + 2) { [weak self] in
+        guard let self = self else { return }
+        if let mac = self.adb.readMACAddress(), !mac.isEmpty {
+          self.macAddress = mac
+          DisplayManager.shared.saveAndroidTVs()
+          os_log("AndroidTVDisplay: learned MAC %{public}@ for %{public}@", type: .info, mac, self.tvName)
+        }
+      }
+    }
   }
 
   // Volume as 0.0–1.0
@@ -25,13 +46,13 @@ class AndroidTVDisplay: Display {
     guard let raw = adb.getVolume() else {
       return readPrefAsFloat(for: .audioSpeakerVolume)
     }
-    let fraction = Float(raw) / Float(AndroidTVDisplay.maxVolume)
+    let fraction = Float(raw) / Float(maxVolume)
     savePref(fraction, for: .audioSpeakerVolume)
     return fraction
   }
 
   func setVolumeFraction(_ fraction: Float) {
-    let level = Int((fraction * Float(AndroidTVDisplay.maxVolume)).rounded())
+    let level = Int((fraction * Float(maxVolume)).rounded())
     adb.setVolume(level)
     savePref(fraction, for: .audioSpeakerVolume)
     if let slider = sliderHandler[.audioSpeakerVolume] {
@@ -43,10 +64,12 @@ class AndroidTVDisplay: Display {
 
   func stepVolume(isUp: Bool) {
     let current = readPrefAsFloat(for: .audioSpeakerVolume)
-    let step: Float = 1.0 / Float(AndroidTVDisplay.maxVolume)
+    let step: Float = 1.0 / Float(maxVolume)
     let newValue = min(max(0, current + (isUp ? step : -step)), 1)
-    setVolumeFraction(newValue)
+    savePref(newValue, for: .audioSpeakerVolume)
+    if let slider = sliderHandler[.audioSpeakerVolume] {
+      DispatchQueue.main.async { slider.setValue(newValue, displayID: self.identifier) }
+    }
+    adb.sendKeyEvent(isUp ? "KEYCODE_VOLUME_UP" : "KEYCODE_VOLUME_DOWN")
   }
-
-  // Brightness is not meaningfully controllable on Android TV — base class handles dummy no-op via isDummy=true
 }

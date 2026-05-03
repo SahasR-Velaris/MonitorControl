@@ -76,9 +76,12 @@ class MediaKeyTapManager: MediaKeyTapDelegate {
     // Route to Android TV if it matches the current audio output device
     if isPressed, [.volumeUp, .volumeDown, .mute].contains(mediaKey) {
       if let deviceName = app.coreAudio.defaultOutputDevice?.name {
-        let normalizedDevice = DisplayManager.shared.normalizedName(deviceName)
-        for tv in DisplayManager.shared.androidTVDisplays {
-          if DisplayManager.shared.normalizedName(tv.tvName) == normalizedDevice {
+        os_log("MediaKeyTap volume key: current device='%{public}@'", type: .info, deviceName)
+        for tv in DisplayManager.shared.androidTVDisplays where !tv.audioDeviceName.isEmpty {
+          os_log("MediaKeyTap:   checking TV '%{public}@' audioDeviceName='%{public}@' match=%{public}@",
+                 type: .info, tv.tvName, tv.audioDeviceName,
+                 tv.audioDeviceName == deviceName ? "YES" : "NO")
+          if tv.audioDeviceName == deviceName {
             switch mediaKey {
             case .volumeUp: tv.stepVolume(isUp: true)
             case .volumeDown: tv.stepVolume(isUp: false)
@@ -183,16 +186,37 @@ class MediaKeyTapManager: MediaKeyTapDelegate {
       let keysToDelete: [MediaKey] = [.brightnessUp, .brightnessDown]
       keys.removeAll { keysToDelete.contains($0) }
     }
-    // Remove volume related keys if audio device is controllable
+    // Remove volume related keys if audio device is controllable,
+    // but keep (and force-add) them if the current output is a mapped Android TV
     if let defaultAudioDevice = app.coreAudio.defaultOutputDevice {
       let keysToDelete: [MediaKey] = [.volumeUp, .volumeDown, .mute]
-      if prefs.integer(forKey: PrefKey.multiKeyboardVolume.rawValue) == MultiKeyboardVolume.audioDeviceNameMatching.rawValue {
-        if DisplayManager.shared.updateAudioControlTargetDisplays(deviceName: defaultAudioDevice.name) == 0 {
+      let isMappedAndroidTV = DisplayManager.shared.androidTVDisplays.contains {
+        !$0.audioDeviceName.isEmpty && $0.audioDeviceName == defaultAudioDevice.name
+      }
+      let canSet = defaultAudioDevice.canSetVirtualMainVolume(scope: .output) == true
+      os_log("MediaKeyTap updateMediaKeyTap: device='%{public}@' isMappedTV=%{public}@ canSetVolume=%{public}@ keysBeforeLogic=%{public}d",
+             type: .info, defaultAudioDevice.name ?? "nil",
+             isMappedAndroidTV ? "YES" : "NO",
+             canSet ? "YES" : "NO",
+             keys.count)
+      if isMappedAndroidTV {
+        // Force volume keys into the tap regardless of keyboardVolume pref —
+        // the user's keyboard volume pref may be "custom" or "disabled" but we
+        // still need to intercept keys to route them to ADB.
+        for key in keysToDelete where !keys.contains(key) {
+          keys.append(key)
+        }
+      } else {
+        if prefs.integer(forKey: PrefKey.multiKeyboardVolume.rawValue) == MultiKeyboardVolume.audioDeviceNameMatching.rawValue {
+          if DisplayManager.shared.updateAudioControlTargetDisplays(deviceName: defaultAudioDevice.name) == 0 {
+            keys.removeAll { keysToDelete.contains($0) }
+          }
+        } else if canSet {
           keys.removeAll { keysToDelete.contains($0) }
         }
-      } else if defaultAudioDevice.canSetVirtualMainVolume(scope: .output) == true {
-        keys.removeAll { keysToDelete.contains($0) }
       }
+      os_log("MediaKeyTap updateMediaKeyTap: final keys=%{public}@", type: .info,
+             keys.map { "\($0)" }.joined(separator: ","))
     }
     self.mediaKeyTap?.stop()
     // returning an empty array listens for all mediakeys in MediaKeyTap

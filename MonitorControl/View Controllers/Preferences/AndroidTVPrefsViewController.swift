@@ -2,6 +2,7 @@
 
 import Cocoa
 import Settings
+import SimplyCoreAudio
 
 class AndroidTVPrefsViewController: NSViewController, SettingsPane {
   let paneIdentifier = Settings.PaneIdentifier.androidTV
@@ -20,7 +21,12 @@ class AndroidTVPrefsViewController: NSViewController, SettingsPane {
   private let removeButton = NSButton()
 
   override func loadView() {
-    self.view = NSView(frame: NSRect(x: 0, y: 0, width: 420, height: 300))
+    self.view = NSView(frame: NSRect(x: 0, y: 0, width: 520, height: 320))
+  }
+
+  override var preferredContentSize: NSSize {
+    get { NSSize(width: 520, height: 320) }
+    set {}
   }
 
   override func viewDidLoad() {
@@ -28,25 +34,31 @@ class AndroidTVPrefsViewController: NSViewController, SettingsPane {
     self.buildUI()
   }
 
+  override func viewWillAppear() {
+    super.viewWillAppear()
+    tableView.reloadData()
+  }
+
   private func buildUI() {
     let nameColumn = NSTableColumn(identifier: NSUserInterfaceItemIdentifier("name"))
     nameColumn.title = NSLocalizedString("Name", comment: "")
-    nameColumn.width = 140
+    nameColumn.width = 120
 
     let hostColumn = NSTableColumn(identifier: NSUserInterfaceItemIdentifier("host"))
-    hostColumn.title = NSLocalizedString("IP Address", comment: "")
-    hostColumn.width = 140
+    hostColumn.title = NSLocalizedString("IP:Port", comment: "")
+    hostColumn.width = 130
 
-    let portColumn = NSTableColumn(identifier: NSUserInterfaceItemIdentifier("port"))
-    portColumn.title = NSLocalizedString("Port", comment: "")
-    portColumn.width = 60
+    let audioColumn = NSTableColumn(identifier: NSUserInterfaceItemIdentifier("audio"))
+    audioColumn.title = NSLocalizedString("macOS Audio Output", comment: "")
+    audioColumn.width = 200
 
     tableView.addTableColumn(nameColumn)
     tableView.addTableColumn(hostColumn)
-    tableView.addTableColumn(portColumn)
+    tableView.addTableColumn(audioColumn)
     tableView.delegate = self
     tableView.dataSource = self
     tableView.usesAlternatingRowBackgroundColors = true
+    tableView.rowHeight = 28
 
     scrollView.documentView = tableView
     scrollView.hasVerticalScroller = true
@@ -83,38 +95,51 @@ class AndroidTVPrefsViewController: NSViewController, SettingsPane {
     ])
   }
 
+  private func audioOutputDeviceNames() -> [String] {
+    let coreAudio = SimplyCoreAudio()
+    return coreAudio.allOutputDevices.compactMap { $0.name }.sorted()
+  }
+
   @objc private func addTV() {
     let alert = NSAlert()
     alert.messageText = NSLocalizedString("Add Android TV", comment: "")
     alert.addButton(withTitle: NSLocalizedString("Add", comment: ""))
     alert.addButton(withTitle: NSLocalizedString("Cancel", comment: ""))
 
-    let container = NSView(frame: NSRect(x: 0, y: 0, width: 280, height: 90))
+    let container = NSView(frame: NSRect(x: 0, y: 0, width: 300, height: 120))
 
-    let nameField = NSTextField(frame: NSRect(x: 80, y: 60, width: 200, height: 22))
+    let nameField = NSTextField(frame: NSRect(x: 90, y: 90, width: 200, height: 22))
     nameField.placeholderString = "My TCL TV"
     let nameLabel = NSTextField(labelWithString: NSLocalizedString("Name:", comment: ""))
-    nameLabel.frame = NSRect(x: 0, y: 62, width: 75, height: 18)
+    nameLabel.frame = NSRect(x: 0, y: 92, width: 85, height: 18)
     nameLabel.alignment = .right
 
-    let ipField = NSTextField(frame: NSRect(x: 80, y: 30, width: 160, height: 22))
+    let ipField = NSTextField(frame: NSRect(x: 90, y: 60, width: 160, height: 22))
     ipField.placeholderString = "192.168.1.x"
     let ipLabel = NSTextField(labelWithString: NSLocalizedString("IP Address:", comment: ""))
-    ipLabel.frame = NSRect(x: 0, y: 32, width: 75, height: 18)
+    ipLabel.frame = NSRect(x: 0, y: 62, width: 85, height: 18)
     ipLabel.alignment = .right
 
-    let portField = NSTextField(frame: NSRect(x: 80, y: 0, width: 60, height: 22))
+    let portField = NSTextField(frame: NSRect(x: 90, y: 30, width: 60, height: 22))
     portField.stringValue = "5555"
     let portLabel = NSTextField(labelWithString: NSLocalizedString("Port:", comment: ""))
-    portLabel.frame = NSRect(x: 0, y: 2, width: 75, height: 18)
+    portLabel.frame = NSRect(x: 0, y: 32, width: 85, height: 18)
     portLabel.alignment = .right
 
-    container.addSubview(nameLabel)
-    container.addSubview(nameField)
-    container.addSubview(ipLabel)
-    container.addSubview(ipField)
-    container.addSubview(portLabel)
-    container.addSubview(portField)
+    let audioPopup = NSPopUpButton(frame: NSRect(x: 90, y: 0, width: 200, height: 22))
+    audioPopup.addItem(withTitle: NSLocalizedString("— Not mapped —", comment: ""))
+    audioPopup.menu?.addItem(NSMenuItem.separator())
+    for name in audioOutputDeviceNames() {
+      audioPopup.addItem(withTitle: name)
+    }
+    let audioLabel = NSTextField(labelWithString: NSLocalizedString("Audio Output:", comment: ""))
+    audioLabel.frame = NSRect(x: 0, y: 2, width: 85, height: 18)
+    audioLabel.alignment = .right
+
+    container.addSubview(nameLabel); container.addSubview(nameField)
+    container.addSubview(ipLabel); container.addSubview(ipField)
+    container.addSubview(portLabel); container.addSubview(portField)
+    container.addSubview(audioLabel); container.addSubview(audioPopup)
     alert.accessoryView = container
 
     guard let window = self.view.window else { return }
@@ -124,7 +149,8 @@ class AndroidTVPrefsViewController: NSViewController, SettingsPane {
       let host = ipField.stringValue
       let port = Int(portField.stringValue) ?? 5555
       guard !host.isEmpty else { return }
-      DisplayManager.shared.addAndroidTV(name: name, host: host, port: port)
+      let selectedAudio = audioPopup.indexOfSelectedItem <= 1 ? "" : (audioPopup.selectedItem?.title ?? "")
+      DisplayManager.shared.addAndroidTV(name: name, host: host, port: port, audioDeviceName: selectedAudio)
       self.tableView.reloadData()
       app.updateMenusAndKeys()
     }
@@ -137,6 +163,15 @@ class AndroidTVPrefsViewController: NSViewController, SettingsPane {
     tableView.reloadData()
     app.updateMenusAndKeys()
   }
+
+  @objc private func audioDeviceChanged(_ sender: NSPopUpButton) {
+    let row = sender.tag
+    guard row < DisplayManager.shared.androidTVDisplays.count else { return }
+    let selected = sender.indexOfSelectedItem <= 1 ? "" : (sender.selectedItem?.title ?? "")
+    DisplayManager.shared.androidTVDisplays[row].audioDeviceName = selected
+    DisplayManager.shared.saveAndroidTVs()
+    app.mediaKeyTap.updateMediaKeyTap()
+  }
 }
 
 extension AndroidTVPrefsViewController: NSTableViewDataSource, NSTableViewDelegate {
@@ -146,15 +181,35 @@ extension AndroidTVPrefsViewController: NSTableViewDataSource, NSTableViewDelega
 
   func tableView(_ tableView: NSTableView, viewFor tableColumn: NSTableColumn?, row: Int) -> NSView? {
     let tv = DisplayManager.shared.androidTVDisplays[row]
-    let cell = NSTextField()
-    cell.isBordered = false
-    cell.backgroundColor = .clear
     switch tableColumn?.identifier.rawValue {
-    case "name": cell.stringValue = tv.tvName
-    case "host": cell.stringValue = tv.adb.host
-    case "port": cell.stringValue = String(tv.adb.port)
-    default: break
+    case "name":
+      let cell = NSTextField()
+      cell.isBordered = false
+      cell.backgroundColor = .clear
+      cell.stringValue = tv.tvName
+      return cell
+    case "host":
+      let cell = NSTextField()
+      cell.isBordered = false
+      cell.backgroundColor = .clear
+      cell.stringValue = "\(tv.adb.host):\(tv.adb.port)"
+      return cell
+    case "audio":
+      let popup = NSPopUpButton()
+      popup.tag = row
+      popup.target = self
+      popup.action = #selector(audioDeviceChanged(_:))
+      popup.addItem(withTitle: NSLocalizedString("— Not mapped —", comment: ""))
+      popup.menu?.addItem(NSMenuItem.separator())
+      for name in audioOutputDeviceNames() {
+        popup.addItem(withTitle: name)
+      }
+      if !tv.audioDeviceName.isEmpty, let item = popup.item(withTitle: tv.audioDeviceName) {
+        popup.select(item)
+      }
+      return popup
+    default:
+      return nil
     }
-    return cell
   }
 }

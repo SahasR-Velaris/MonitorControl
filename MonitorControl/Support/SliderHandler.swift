@@ -265,7 +265,14 @@ class SliderHandler {
 
   func addDisplay(_ display: Display) {
     self.displays.append(display)
-    if let otherDisplay = display as? OtherDisplay {
+    if let androidTV = display as? AndroidTVDisplay {
+      let cached = androidTV.readPrefAsFloat(for: .audioSpeakerVolume)
+      self.setValue(cached > 0 ? cached : 0.5, displayID: androidTV.identifier)
+      DispatchQueue.global(qos: .userInitiated).async {
+        let live = androidTV.getVolumeFraction()
+        DispatchQueue.main.async { self.setValue(live, displayID: androidTV.identifier) }
+      }
+    } else if let otherDisplay = display as? OtherDisplay {
       let value = otherDisplay.setupSliderCurrentValue(command: self.command)
       self.setValue(value, displayID: otherDisplay.identifier)
     } else if let appleDisplay = display as? AppleDisplay {
@@ -327,6 +334,8 @@ class SliderHandler {
       slider.setHighlightItem(display.identifier, value: value)
       if self.command == .brightness, let appleDisplay = display as? AppleDisplay {
         _ = appleDisplay.setBrightness(value)
+      } else if let androidTV = display as? AndroidTVDisplay {
+        androidTV.setVolumeFraction(value)
       } else if let otherDisplay = display as? OtherDisplay {
         self.valueChangedOtherDisplay(otherDisplay: otherDisplay, value: value)
       }

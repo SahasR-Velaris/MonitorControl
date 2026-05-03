@@ -71,7 +71,9 @@ class MenuHandler: NSMenu, NSMenuDelegate {
         self.addCombinedDisplayMenuBlock()
       }
     }
-    for tv in DisplayManager.shared.androidTVDisplays {
+    // Android TVs not already merged into a display block get their own block
+    let mergedTVNames = Set(displays.map { $0.name })
+    for tv in DisplayManager.shared.androidTVDisplays where !mergedTVNames.contains(tv.tvName) {
       self.updateAndroidTVMenu(tv: tv)
     }
     self.addDefaultMenuOptions()
@@ -183,7 +185,19 @@ class MenuHandler: NSMenu, NSMenuDelegate {
     let monitorSubMenu: NSMenu = asSubMenu ? NSMenu() : self
     var addedSliderHandlers: [SliderHandler] = []
     display.sliderHandler[.audioSpeakerVolume] = nil
-    if let otherDisplay = display as? OtherDisplay, !otherDisplay.isSw(), !display.readPrefAsBool(key: .unavailableDDC, for: .audioSpeakerVolume), !prefs.bool(forKey: PrefKey.hideVolume.rawValue) {
+    // If an Android TV shares this display's name, use its volume slider instead of DDC
+    let matchedTV = DisplayManager.shared.androidTVDisplays.first { $0.tvName == display.name }
+    if let tv = matchedTV, !prefs.bool(forKey: PrefKey.hideVolume.rawValue) {
+      let title = NSLocalizedString("Volume", comment: "Shown in menu")
+      let sliderHandler = SliderHandler(display: tv, command: .audioSpeakerVolume, title: title)
+      tv.sliderHandler[.audioSpeakerVolume] = sliderHandler
+      display.sliderHandler[.audioSpeakerVolume] = sliderHandler
+      DispatchQueue.global(qos: .userInitiated).async {
+        let fraction = tv.getVolumeFraction()
+        DispatchQueue.main.async { sliderHandler.setValue(fraction, displayID: tv.identifier) }
+      }
+      addedSliderHandlers.append(sliderHandler)
+    } else if let otherDisplay = display as? OtherDisplay, !otherDisplay.isSw(), !display.readPrefAsBool(key: .unavailableDDC, for: .audioSpeakerVolume), !prefs.bool(forKey: PrefKey.hideVolume.rawValue) {
       let title = NSLocalizedString("Volume", comment: "Shown in menu")
       addedSliderHandlers.append(self.setupMenuSliderHandler(command: .audioSpeakerVolume, display: display, title: title))
     }
