@@ -5,7 +5,7 @@ import os.log
 
 class AndroidTVADB {
   var host: String  // mutable — updated automatically when IP changes
-  let port: Int
+  var port: Int
 
   private var adbPath: String {
     let candidates = ["/opt/homebrew/bin/adb", "/usr/local/bin/adb", "/usr/bin/adb"]
@@ -21,9 +21,18 @@ class AndroidTVADB {
 
   @discardableResult
   private func run(_ args: [String]) -> String? {
+    let result = runOnce(["-s", "\(host):\(port)"] + args)
+    if result.success { return result.output }
+    // Auto-reconnect and retry once — handles stale ADB server / dropped connection
+    _ = runOnce(["connect", "\(host):\(port)"])
+    let retry = runOnce(["-s", "\(host):\(port)"] + args)
+    return retry.success ? retry.output : nil
+  }
+
+  private func runOnce(_ args: [String]) -> (output: String?, success: Bool) {
     let process = Process()
     process.executableURL = URL(fileURLWithPath: adbPath)
-    process.arguments = ["-s", "\(host):\(port)"] + args
+    process.arguments = args
     let pipe = Pipe()
     process.standardOutput = pipe
     process.standardError = Pipe()
@@ -31,10 +40,11 @@ class AndroidTVADB {
       try process.run()
       process.waitUntilExit()
       let data = pipe.fileHandleForReading.readDataToEndOfFile()
-      return String(data: data, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines)
+      let output = String(data: data, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines)
+      return (output, process.terminationStatus == 0)
     } catch {
       os_log("AndroidTVADB run error: %{public}@", type: .error, error.localizedDescription)
-      return nil
+      return (nil, false)
     }
   }
 
@@ -117,8 +127,30 @@ class AndroidTVADB {
   }
 
   func isConnected() -> Bool {
-    guard let output = runDirect(["get-state", "-s", "\(host):\(port)"]) else { return false }
-    return output.contains("device")
+    return getStatus() == .connected
+  }
+
+  enum Status {
+    case connected, unauthorized, disconnected
+  }
+
+  // Checks the current status from `adb devices` without forcing a reconnect.
+  func getStatus() -> Status {
+    let target = "\(host):\(port)"
+    let output = runOnce(["devices"]).output ?? ""
+    for line in output.components(separatedBy: "\n") where line.hasPrefix(target) {
+      if line.contains("unauthorized") { return .unauthorized }
+      if line.contains("device") { return .connected }
+      if line.contains("offline") { return .disconnected }
+    }
+    return .disconnected
+  }
+
+  // Tries to (re)establish the ADB connection. Returns the resulting status.
+  @discardableResult
+  func reconnect() -> Status {
+    _ = runOnce(["connect", "\(host):\(port)"])
+    return getStatus()
   }
 
   // MARK: - Volume

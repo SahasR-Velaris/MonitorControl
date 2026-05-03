@@ -368,6 +368,16 @@ class DisplayManager {
       saveAndroidTVs()
     }
   }
+
+  func updateAndroidTV(at index: Int, name: String, host: String, port: Int, audioDeviceName: String) {
+    guard index < androidTVDisplays.count else { return }
+    let tv = androidTVDisplays[index]
+    tv.tvName = name
+    tv.adb.host = host
+    tv.adb.port = port
+    tv.audioDeviceName = audioDeviceName
+    saveAndroidTVs()
+  }
   
   func addDisplayCounterSuffixes() {
     var nameDisplays: [String: [Display]] = [:]
